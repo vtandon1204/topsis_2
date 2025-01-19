@@ -19,7 +19,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'topsis=topsis_jatin.topsis:main'
+            'topsis=topsis_vaibhav.topsis:main'
         ]
     },
     classifiers=[

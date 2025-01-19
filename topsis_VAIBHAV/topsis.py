@@ -3,90 +3,90 @@ import numpy as np
 import os
 import sys
 
-def topsis(input_file, weights, impacts, output_file):
+def compute_topsis(data_path, priority_weights, benefit_impacts, result_path):
     """
-    Calculate TOPSIS scores and ranks for given dataset.
-    
+    Compute TOPSIS scores and ranks for a given dataset.
+
     Parameters:
     -----------
-    input_file : str
-        Path to input CSV file containing the decision matrix
-    weights : str
-        Comma separated string of weights (e.g. "1,1,1,2")
-    impacts : str
-        Comma separated string of impacts (e.g. "+,+,-,+")
-    output_file : str
-        Path where the result CSV will be saved
-        
+    data_path : str
+        Path to the input CSV file containing the decision matrix.
+    priority_weights : str
+        Comma-separated string of weights (e.g., "1,1,1,2").
+    benefit_impacts : str
+        Comma-separated string of impacts (e.g., "+,+,-,+").
+    result_path : str
+        Path to save the resulting CSV file.
+
     Returns:
     --------
     None
-        Saves the result to specified output file
-        
+        Saves the results to the specified output file.
+
     Raises:
     -------
     Exception
-        If there are any validation or calculation errors
+        If there are any validation or calculation errors.
     """
     try:
-        # Validation checks
-        if not os.path.exists(input_file):
-            raise Exception(f"Input file '{input_file}' does not exist")
-            
+        # Validate file existence
+        if not os.path.exists(data_path):
+            raise Exception(f"Input file '{data_path}' does not exist")
+
         # Read input file
-        df = pd.read_csv(input_file)
-        
-        if len(df.columns) < 3:
+        dataset = pd.read_csv(data_path)
+
+        if len(dataset.columns) < 3:
             raise Exception("Input file must contain three or more columns")
-            
-        # Convert weights to list of floats
-        weight_list = [float(w) for w in weights.split(',')]
-        impact_list = impacts.split(',')
-        
+
+        # Convert weights and impacts to appropriate formats
+        weight_values = [float(weight) for weight in priority_weights.split(',')]
+        impact_values = benefit_impacts.split(',')
+
         # Validate weights and impacts
-        if len(weight_list) != len(df.columns) - 1:
-            raise Exception("Number of weights must match number of criteria columns")
-            
-        if len(impact_list) != len(df.columns) - 1:
-            raise Exception("Number of impacts must match number of criteria columns")
-            
-        if not all(x in ['+', '-'] for x in impact_list):
-            raise Exception("Impacts must be either + or -")
-            
-        # Extract numeric columns
-        decision_matrix = df.iloc[:, 1:].values.astype(float)
-        
-        # Normalize the decision matrix
-        normalized_matrix = decision_matrix / np.sqrt(np.sum(decision_matrix**2, axis=0))
-        
-        # Calculate weighted normalized matrix
-        weighted_matrix = normalized_matrix * weight_list
-        
-        # Find ideal best and worst values
+        if len(weight_values) != len(dataset.columns) - 1:
+            raise Exception("Number of weights must match the number of criteria columns")
+
+        if len(impact_values) != len(dataset.columns) - 1:
+            raise Exception("Number of impacts must match the number of criteria columns")
+
+        if not all(impact in ['+', '-'] for impact in impact_values):
+            raise Exception("Impacts must be either '+' or '-'")
+
+        # Extract numeric decision matrix
+        criteria_matrix = dataset.iloc[:, 1:].values.astype(float)
+
+        # Step 1: Normalize the decision matrix
+        normalized_matrix = criteria_matrix / np.sqrt(np.sum(criteria_matrix**2, axis=0))
+
+        # Step 2: Compute weighted normalized matrix
+        weighted_matrix = normalized_matrix * weight_values
+
+        # Step 3: Determine ideal best and worst values
         ideal_best = []
         ideal_worst = []
-        
-        for idx, impact in enumerate(impact_list):
+
+        for index, impact in enumerate(impact_values):
             if impact == '+':
-                ideal_best.append(max(weighted_matrix[:, idx]))
-                ideal_worst.append(min(weighted_matrix[:, idx]))
+                ideal_best.append(max(weighted_matrix[:, index]))
+                ideal_worst.append(min(weighted_matrix[:, index]))
             else:
-                ideal_best.append(min(weighted_matrix[:, idx]))
-                ideal_worst.append(max(weighted_matrix[:, idx]))
-                
-        # Calculate separation measures
-        s_positive = np.sqrt(np.sum((weighted_matrix - ideal_best)**2, axis=1))
-        s_negative = np.sqrt(np.sum((weighted_matrix - ideal_worst)**2, axis=1))
-        
-        # Calculate performance score
-        performance = s_negative / (s_positive + s_negative)
-        
-        # Add results to dataframe
-        df['Topsis Score'] = performance
-        df['Rank'] = df['Topsis Score'].rank(ascending=False)
-        
-        # Save results
-        df.to_csv(output_file, index=False)
-        
-    except Exception as e:
-        raise Exception(str(e))
+                ideal_best.append(min(weighted_matrix[:, index]))
+                ideal_worst.append(max(weighted_matrix[:, index]))
+
+        # Step 4: Calculate separation measures
+        distance_positive = np.sqrt(np.sum((weighted_matrix - ideal_best)**2, axis=1))
+        distance_negative = np.sqrt(np.sum((weighted_matrix - ideal_worst)**2, axis=1))
+
+        # Step 5: Compute performance scores
+        scores = distance_negative / (distance_positive + distance_negative)
+
+        # Add results to the dataset
+        dataset['Performance Score'] = scores
+        dataset['Rank'] = dataset['Performance Score'].rank(ascending=False)
+
+        # Save results to file
+        dataset.to_csv(result_path, index=False)
+
+    except Exception as error:
+        raise Exception(str(error))
